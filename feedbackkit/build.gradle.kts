@@ -38,7 +38,8 @@ androidComponents {
         val generateSdkVersion = tasks.register<GenerateSdkVersionTask>(
             "generate${variant.name.replaceFirstChar { it.uppercase() }}SdkVersion",
         ) {
-            sdkVersion.set(project.version.toString())
+            // The SDK reports its own version, not the coordinate a repository built it under.
+            sdkVersion.set(providers.gradleProperty("feedbackkit.version"))
             packageName.set("io.github.feedbacklib.android.internal.core")
         }
         // built-in Kotlin compiles .kt sources found in either the "kotlin" or "java" source set;

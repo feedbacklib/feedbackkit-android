@@ -25,8 +25,12 @@ public class AndroidLibraryConventionPlugin : Plugin<Project> {
 
     private fun configure(project: Project) {
         fun property(name: String): String = project.providers.gradleProperty(name).get()
-        project.group = property("feedbackkit.group")
-        project.version = property("feedbackkit.version")
+        // JitPack serves its own coordinates, com.github.<owner>.<repo>:<module>:<git ref>, and says so
+        // in its environment; everywhere else the coordinates come from gradle.properties.
+        fun env(name: String): String? = project.providers.environmentVariable(name).orNull
+        val jitpack = env("JITPACK") != null && env("GROUP") != null && env("ARTIFACT") != null && env("VERSION") != null
+        project.group = if (jitpack) "${env("GROUP")}.${env("ARTIFACT")}" else property("feedbackkit.group")
+        project.version = if (jitpack) env("VERSION")!! else property("feedbackkit.version")
 
         project.extensions.configure(LibraryExtension::class.java) {
             compileSdk = property("feedbackkit.compileSdk").toInt()

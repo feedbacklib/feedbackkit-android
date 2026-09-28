@@ -1,0 +1,4 @@
+jdk:
+  - openjdk17
+install:
+  - ./gradlew :feedbackkit:publishToMavenLocal :feedbackkit-recording:publishToMavenLocal --console=plain
