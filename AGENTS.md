@@ -47,7 +47,7 @@ Android SDK баг-репортинга.
 - Тесты: чистая логика — JUnit 5 (`@TempDir`); код с Android-классами — JUnit 4 + Robolectric
   (`@RunWith(RobolectricTestRunner::class)`, SDK 35 из `src/test/resources/robolectric.properties`),
   запускается через vintage engine вместе с JUnit 5.
-- Коммиты — без ИИ-трейлеров (`Co-Authored-By`, `Claude-Session`) и только локальные.
+- Коммиты — без ИИ-трейлеров (`Co-Authored-By`, `Claude-Session`). Публикация — `origin` = `github.com/feedbacklib/feedbackkit-android`, пушится только `main`; внутренние имена компании и хост-приложения в репу не попадают.
 - Видимые строки SDK — ресурсы `values/` + `values-ru/` (lint `MissingTranslation` ловит пропуск);
   текст, который хост может заменить, получает ключ в `TextKey` (публичное API — через `updateAbi`).
 - Префиксы ресурсов: `:feedbackkit` — `feedbackkit_`, но никогда `feedbackkit_recording_`;
