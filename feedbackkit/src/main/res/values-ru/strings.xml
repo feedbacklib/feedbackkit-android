@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feedbackkit_floating_button_description">Сообщить о проблеме</string>
+
+    <string name="feedbackkit_prompt_title">Чем мы можем помочь?</string>
+    <string name="feedbackkit_report_bug">Сообщить об ошибке</string>
+    <string name="feedbackkit_report_bug_description">Что-то в приложении работает не так</string>
+    <string name="feedbackkit_report_feedback">Предложить улучшение</string>
+    <string name="feedbackkit_report_feedback_description">Расскажите, что можно сделать лучше</string>
+    <string name="feedbackkit_report_question">Задать вопрос</string>
+    <string name="feedbackkit_report_question_description">Спросите что угодно о приложении</string>
+    <string name="feedbackkit_email_label">Электронная почта</string>
+    <string name="feedbackkit_email_label_optional">Электронная почта (необязательно)</string>
+    <string name="feedbackkit_email_invalid">Введите корректный адрес почты</string>
+    <string name="feedbackkit_required_field">Обязательное поле</string>
+    <string name="feedbackkit_comment_hint_bug">Что пошло не так?</string>
+    <string name="feedbackkit_comment_hint_feedback">Что бы вы хотели улучшить?</string>
+    <string name="feedbackkit_comment_hint_question">Какой у вас вопрос?</string>
+    <string name="feedbackkit_screenshot_unavailable">Скриншот недоступен для этого экрана</string>
+    <string name="feedbackkit_extended_title">Расскажите подробнее</string>
+    <string name="feedbackkit_extended_steps">Шаги воспроизведения</string>
+    <string name="feedbackkit_extended_actual">Фактический результат</string>
+    <string name="feedbackkit_extended_expected">Ожидаемый результат</string>
+    <string name="feedbackkit_button_next">Далее</string>
+    <string name="feedbackkit_button_send">Отправить</string>
+    <string name="feedbackkit_sending">Отправляем…</string>
+    <string name="feedbackkit_submit_failed">Не удалось сохранить отчёт. Попробуйте ещё раз.</string>
+    <string name="feedbackkit_success_title">Спасибо!</string>
+    <string name="feedbackkit_success_message">Ваш отчёт уже в пути.</string>
+    <string name="feedbackkit_cancel_confirm_title">Отменить отчёт?</string>
+    <string name="feedbackkit_cancel_confirm_message">Введённый текст будет потерян.</string>
+    <string name="feedbackkit_cancel_confirm_discard">Удалить</string>
+    <string name="feedbackkit_cancel_confirm_keep">Продолжить</string>
+    <string name="feedbackkit_proactive_prompt_message">Похоже, что-то пошло не так. Расскажете, что случилось?</string>
+    <string name="feedbackkit_proactive_tell_us">Рассказать</string>
+    <string name="feedbackkit_proactive_not_now">Не сейчас</string>
+    <string name="feedbackkit_report_frustrating_experience">Что случилось?</string>
+    <string name="feedbackkit_comment_hint_frustrating_experience">Опишите, что произошло</string>
+
+    <string name="feedbackkit_extended_steps_hint">Что вы делали, по шагам?</string>
+    <string name="feedbackkit_extended_actual_hint">Что произошло?</string>
+    <string name="feedbackkit_extended_expected_hint">Что вы ожидали увидеть?</string>
+
+    <string name="feedbackkit_action_close">Закрыть</string>
+    <string name="feedbackkit_action_back">Назад</string>
+    <string name="feedbackkit_attachment_screenshot">Скриншот экрана, с которого отправлен отчёт</string>
+    <string name="feedbackkit_attachment_remove">Удалить скриншот</string>
+    <string name="feedbackkit_comment_counter_description">Введено %1$d из %2$d символов</string>
+
+    <string name="feedbackkit_add_image">Добавить изображение</string>
+    <string name="feedbackkit_add_screenshot">Добавить скриншот</string>
+    <string name="feedbackkit_attachment_limit">Не больше 4 вложений</string>
+    <string name="feedbackkit_attachment_extra_screenshot">Дополнительный скриншот</string>
+    <string name="feedbackkit_attachment_gallery">Изображение из галереи</string>
+    <string name="feedbackkit_attachment_remove_image">Удалить изображение</string>
+    <string name="feedbackkit_notice_image_too_large">Изображение больше 10 МБ</string>
+    <string name="feedbackkit_notice_image_unsupported">Этот тип файла не поддерживается</string>
+    <string name="feedbackkit_notice_image_failed">Не удалось приложить изображение</string>
+
+    <string name="feedbackkit_record_screen">Записать экран</string>
+    <string name="feedbackkit_attachment_screen_recording">Запись экрана</string>
+    <string name="feedbackkit_attachment_auto_recording">Автоматическая запись экрана</string>
+    <string name="feedbackkit_attachment_remove_recording">Удалить запись</string>
+    <string name="feedbackkit_notice_record_failed">Не удалось записать экран</string>
+    <string name="feedbackkit_auto_recording_preparing">Готовится запись экрана</string>
+
+    <!-- Редактор разметки (спека §6). -->
+    <string name="feedbackkit_annotation_title">Разметка</string>
+    <string name="feedbackkit_annotation_done">Готово</string>
+    <string name="feedbackkit_annotation_undo">Отменить</string>
+    <string name="feedbackkit_annotation_edit">Редактировать</string>
+    <string name="feedbackkit_annotation_canvas">Изображение для разметки</string>
+    <string name="feedbackkit_annotation_discard_title">Отменить изменения?</string>
+    <string name="feedbackkit_annotation_load_failed">Не удалось открыть изображение</string>
+    <string name="feedbackkit_annotation_save_failed">Не удалось сохранить изображение. Попробуйте ещё раз.</string>
+    <string name="feedbackkit_tool_pen">Карандаш</string>
+    <string name="feedbackkit_tool_magnifier">Лупа</string>
+    <string name="feedbackkit_tool_blur">Размытие</string>
+    <string name="feedbackkit_pen_red">Красный</string>
+    <string name="feedbackkit_pen_yellow">Жёлтый</string>
+    <string name="feedbackkit_pen_blue">Синий</string>
+    <string name="feedbackkit_pen_thin">Тонкая линия</string>
+    <string name="feedbackkit_pen_thick">Толстая линия</string>
+    <string name="feedbackkit_capture_hint">Откройте экран, который нужно снять</string>
+    <string name="feedbackkit_capture_take">Снять</string>
+    <string name="feedbackkit_capture_cancel">Отмена</string>
+    <string name="feedbackkit_record_stop">Стоп</string>
+    <string name="feedbackkit_record_stop_description">Остановить запись</string>
+    <string name="feedbackkit_record_timer_description">Запись, %1$s</string>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Translucent, so the host screen stays visible behind the report type menu (spec §1). The dim
+         is the menu's Compose scrim, not the window's (backgroundDimEnabled is off); every other
+         step draws its own opaque surface. -->
+    <style name="feedbackkit_TranslucentTheme" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+</resources>

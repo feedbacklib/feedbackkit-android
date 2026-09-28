@@ -1,0 +1,112 @@
+openapi: 3.0.3
+info:
+  title: FeedbackKit report intake (draft)
+  version: 0.1.0
+  description: Draft contract for receiving reports from the FeedbackKit Android SDK. See docs/backend-contract.md.
+paths:
+  /reports:
+    post:
+      summary: Submit one report
+      parameters:
+        - in: header
+          name: X-FeedbackKit-CID
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-FeedbackKit-Report-Id
+          required: true
+          description: Client-generated report UUID; repeated submissions with the same id are duplicates.
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [report]
+              properties:
+                report:
+                  $ref: '#/components/schemas/Report'
+              additionalProperties:
+                type: string
+                format: binary
+                description: One part per attachment, part name = attachments[].id.
+            encoding:
+              report:
+                contentType: application/json
+      responses:
+        '200': { description: Accepted (or a duplicate of an accepted report) }
+        '201': { description: Accepted }
+        '400': { description: Rejected permanently; the client marks the report failed }
+        '408': { description: Retried by the client }
+        '429': { description: Retried by the client }
+        '500': { description: Retried by the client }
+        '503': { description: Retried by the client }
+components:
+  schemas:
+    Report:
+      type: object
+      required: [schemaVersion, id, cid, type, createdAt, comment, tags, userAttributes, consoleLog, attachments, device, app]
+      properties:
+        schemaVersion: { type: integer, enum: [1] }
+        id: { type: string, format: uuid }
+        cid: { type: string }
+        type: { type: string, enum: [BUG, FEEDBACK, QUESTION, FRUSTRATING_EXPERIENCE] }
+        createdAt: { type: string, format: date-time }
+        email: { type: string, nullable: true }
+        comment: { type: string }
+        extended:
+          type: object
+          nullable: true
+          required: [steps, actual, expected]
+          properties:
+            steps: { type: string }
+            actual: { type: string }
+            expected: { type: string }
+        proactive:
+          type: object
+          nullable: true
+          required: [trigger, detectedAt]
+          properties:
+            trigger: { type: string, enum: [CRASH, FORCE_RESTART] }
+            detectedAt: { type: string, format: date-time }
+            exception: { type: string, nullable: true }
+            stacktrace: { type: string, nullable: true }
+        tags: { type: array, items: { type: string } }
+        userAttributes: { type: object, additionalProperties: { type: string } }
+        userData: { type: string, nullable: true }
+        consoleLog: { type: array, items: { type: string } }
+        attachments:
+          type: array
+          items:
+            type: object
+            required: [id, kind, fileName, mimeType, sizeBytes]
+            properties:
+              id: { type: string }
+              kind: { type: string, enum: [SCREENSHOT, EXTRA_SCREENSHOT, GALLERY_IMAGE, SCREEN_RECORDING, AUTO_SCREEN_RECORDING, APP_FILE] }
+              fileName: { type: string }
+              mimeType: { type: string }
+              sizeBytes: { type: integer, format: int64 }
+        device:
+          type: object
+          required: [manufacturer, model, osVersion, apiLevel, locale, orientation, screen, freeMemoryMb, freeDiskMb, networkType]
+          properties:
+            manufacturer: { type: string }
+            model: { type: string }
+            osVersion: { type: string }
+            apiLevel: { type: integer }
+            locale: { type: string }
+            orientation: { type: string, enum: [portrait, landscape, undefined] }
+            screen: { type: string, example: 1080x2400@420 }
+            freeMemoryMb: { type: integer, format: int64 }
+            freeDiskMb: { type: integer, format: int64 }
+            networkType: { type: string, enum: [wifi, cellular, ethernet, vpn, other, none, unknown] }
+        app:
+          type: object
+          required: [packageName, versionCode, sdkVersion]
+          properties:
+            packageName: { type: string }
+            versionName: { type: string, nullable: true }
+            versionCode: { type: integer, format: int64 }
+            sdkVersion: { type: string }
+        currentScreen: { type: string, nullable: true }

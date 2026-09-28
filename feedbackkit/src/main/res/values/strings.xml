@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Accessibility label of the floating invocation button. -->
+    <string name="feedbackkit_floating_button_description">Report a problem</string>
+
+    <!-- Report screen; each string below with a TextKey can be replaced via FeedbackKit.setCustomTexts. -->
+    <string name="feedbackkit_prompt_title">How can we help?</string>
+    <string name="feedbackkit_report_bug">Report a bug</string>
+    <string name="feedbackkit_report_bug_description">Something in the app is broken</string>
+    <string name="feedbackkit_report_feedback">Suggest an improvement</string>
+    <string name="feedbackkit_report_feedback_description">Tell us what could be better</string>
+    <string name="feedbackkit_report_question">Ask a question</string>
+    <string name="feedbackkit_report_question_description">Ask anything about the app</string>
+    <string name="feedbackkit_email_label">Email</string>
+    <string name="feedbackkit_email_label_optional">Email (optional)</string>
+    <string name="feedbackkit_email_invalid">Enter a valid email address</string>
+    <string name="feedbackkit_required_field">Required</string>
+    <string name="feedbackkit_comment_hint_bug">What went wrong?</string>
+    <string name="feedbackkit_comment_hint_feedback">What would you like to improve?</string>
+    <string name="feedbackkit_comment_hint_question">What is your question?</string>
+    <string name="feedbackkit_screenshot_unavailable">Screenshot unavailable for this screen</string>
+    <string name="feedbackkit_extended_title">Tell us more</string>
+    <string name="feedbackkit_extended_steps">Steps to reproduce</string>
+    <string name="feedbackkit_extended_actual">Actual result</string>
+    <string name="feedbackkit_extended_expected">Expected result</string>
+    <string name="feedbackkit_button_next">Next</string>
+    <string name="feedbackkit_button_send">Send</string>
+    <string name="feedbackkit_sending">Sending…</string>
+    <string name="feedbackkit_submit_failed">Could not save the report. Please try again.</string>
+    <string name="feedbackkit_success_title">Thank you!</string>
+    <string name="feedbackkit_success_message">Your report is on its way.</string>
+    <string name="feedbackkit_cancel_confirm_title">Discard the report?</string>
+    <string name="feedbackkit_cancel_confirm_message">What you have entered will be lost.</string>
+    <string name="feedbackkit_cancel_confirm_discard">Discard</string>
+    <string name="feedbackkit_cancel_confirm_keep">Keep editing</string>
+    <!-- Proactive reporting's prompt and the report it opens (spec §8); replaceable via FeedbackKit.setCustomTexts. -->
+    <string name="feedbackkit_proactive_prompt_message">Looks like something went wrong. Would you tell us what happened?</string>
+    <string name="feedbackkit_proactive_tell_us">Tell us</string>
+    <string name="feedbackkit_proactive_not_now">Not now</string>
+    <string name="feedbackkit_report_frustrating_experience">What happened?</string>
+    <string name="feedbackkit_comment_hint_frustrating_experience">Describe what happened</string>
+
+    <!-- Default placeholders of the extended step; BugReporting.setExtendedBugReportHints replaces them. -->
+    <string name="feedbackkit_extended_steps_hint">What did you do, step by step?</string>
+    <string name="feedbackkit_extended_actual_hint">What happened?</string>
+    <string name="feedbackkit_extended_expected_hint">What did you expect to happen?</string>
+
+    <!-- Accessibility labels. -->
+    <string name="feedbackkit_action_close">Close</string>
+    <string name="feedbackkit_action_back">Back</string>
+    <string name="feedbackkit_attachment_screenshot">Screenshot of the screen you reported from</string>
+    <string name="feedbackkit_attachment_remove">Remove screenshot</string>
+    <string name="feedbackkit_comment_counter_description">%1$d of %2$d characters</string>
+
+    <!-- Attachment strip (spec §6). -->
+    <string name="feedbackkit_add_image">Add image</string>
+    <string name="feedbackkit_add_screenshot">Add screenshot</string>
+    <string name="feedbackkit_attachment_limit">Up to 4 attachments</string>
+    <string name="feedbackkit_attachment_extra_screenshot">Additional screenshot</string>
+    <string name="feedbackkit_attachment_gallery">Image from the gallery</string>
+    <string name="feedbackkit_attachment_remove_image">Remove image</string>
+    <string name="feedbackkit_notice_image_too_large">This image is larger than 10 MB</string>
+    <string name="feedbackkit_notice_image_unsupported">This file type is not supported</string>
+    <string name="feedbackkit_notice_image_failed">Could not attach the image</string>
+
+    <!-- Screen recording in the attachment strip (spec §7). -->
+    <string name="feedbackkit_record_screen">Record screen</string>
+    <string name="feedbackkit_attachment_screen_recording">Screen recording</string>
+    <string name="feedbackkit_attachment_auto_recording">Automatic screen recording</string>
+    <string name="feedbackkit_attachment_remove_recording">Remove recording</string>
+    <string name="feedbackkit_notice_record_failed">Could not record the screen</string>
+    <!-- Read out for the placeholder of the automatic recording while it is being made (spec §7). -->
+    <string name="feedbackkit_auto_recording_preparing">Preparing the screen recording</string>
+
+    <!-- Annotation editor (spec §6). -->
+    <string name="feedbackkit_annotation_title">Annotate</string>
+    <string name="feedbackkit_annotation_done">Done</string>
+    <string name="feedbackkit_annotation_undo">Undo</string>
+    <string name="feedbackkit_annotation_edit">Edit</string>
+    <string name="feedbackkit_annotation_canvas">Image being annotated</string>
+    <string name="feedbackkit_annotation_discard_title">Discard your changes?</string>
+    <string name="feedbackkit_annotation_load_failed">Could not open the image</string>
+    <string name="feedbackkit_annotation_save_failed">Could not save the image. Please try again.</string>
+    <string name="feedbackkit_tool_pen">Pen</string>
+    <string name="feedbackkit_tool_magnifier">Magnifier</string>
+    <string name="feedbackkit_tool_blur">Blur</string>
+    <string name="feedbackkit_pen_red">Red</string>
+    <string name="feedbackkit_pen_yellow">Yellow</string>
+    <string name="feedbackkit_pen_blue">Blue</string>
+    <string name="feedbackkit_pen_thin">Thin line</string>
+    <string name="feedbackkit_pen_thick">Thick line</string>
+    <!-- Capture mode over the host screen (spec §6). -->
+    <string name="feedbackkit_capture_hint">Open the screen you want to capture</string>
+    <string name="feedbackkit_capture_take">Capture</string>
+    <string name="feedbackkit_capture_cancel">Cancel</string>
+    <!-- The Stop control over the host while the screen is recorded (spec §7). -->
+    <string name="feedbackkit_record_stop">Stop</string>
+    <string name="feedbackkit_record_stop_description">Stop recording</string>
+    <!-- Read out for the timer beside Stop; %1$s is the time recorded, e.g. 0:05. -->
+    <string name="feedbackkit_record_timer_description">Recording, %1$s</string>
+</resources>

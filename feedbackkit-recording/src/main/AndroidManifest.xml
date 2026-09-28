@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Screen recording (spec §3, §7). Only this artifact brings these to the host's manifest; the
+         mediaProjection service type needs a Play Console declaration. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <!-- The recording notification on Android 13+. Never requested by the SDK: the host decides. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application>
+        <!-- Transparent host of the privacy notice and the system consent dialog; kept across
+             rotation, font scale and locale changes without a restart (it restores its step anyway). -->
+        <activity
+            android:name=".internal.ConsentActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|density|uiMode|fontScale|locale|layoutDirection"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@style/feedbackkit_recording_ConsentTheme" />
+
+        <service
+            android:name=".internal.RecordingService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection"
+            tools:targetApi="q" />
+    </application>
+</manifest>

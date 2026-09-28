@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The foreground service notification while the screen is recorded (spec §7). -->
+    <string name="feedbackkit_recording_channel">Screen recording</string>
+    <string name="feedbackkit_recording_notification_title">Recording the screen</string>
+    <string name="feedbackkit_recording_notification_text">For a bug report in this app</string>
+
+    <!-- The privacy notice shown before the system screen capture consent (spec §7, §10). -->
+    <string name="feedbackkit_recording_privacy_notice">The recording shows the whole screen: hidden fields are not masked. Protected screens are not recorded.</string>
+    <string name="feedbackkit_recording_privacy_continue">Continue</string>
+    <string name="feedbackkit_recording_privacy_cancel">Cancel</string>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feedbackkit_recording_channel">Запись экрана</string>
+    <string name="feedbackkit_recording_notification_title">Идёт запись экрана</string>
+    <string name="feedbackkit_recording_notification_text">Для отчёта об ошибке в этом приложении</string>
+
+    <string name="feedbackkit_recording_privacy_notice">Запись включает весь экран: скрытые поля не маскируются. Защищённые экраны не записываются.</string>
+    <string name="feedbackkit_recording_privacy_continue">Продолжить</string>
+    <string name="feedbackkit_recording_privacy_cancel">Отмена</string>
+</resources>

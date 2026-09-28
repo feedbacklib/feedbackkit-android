@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity android:name="io.github.feedbacklib.android.capture.RedActivity" android:exported="false" />
+        <activity android:name="io.github.feedbacklib.android.capture.SecureActivity" android:exported="false" />
+        <!-- A picked gallery photo for the editor's device tests. -->
+        <provider
+            android:name="io.github.feedbacklib.android.ui.TestImageProvider"
+            android:authorities="io.github.feedbacklib.android.test.images"
+            android:exported="false" />
+    </application>
+</manifest>

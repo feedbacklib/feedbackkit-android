@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Nothing of its own on screen but the privacy notice: the system consent dialog shows over the host or the report. -->
+    <style name="feedbackkit_recording_ConsentTheme" parent="@android:style/Theme.Translucent.NoTitleBar">
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
+    <!-- The privacy notice before the system consent: the device's own alert dialog look. -->
+    <style name="feedbackkit_recording_NoticeTheme" parent="@android:style/Theme.DeviceDefault.Light.Dialog.Alert" />
+</resources>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- networkType in report.json (spec §9). A normal permission, granted at install. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Screenshot invocation on Android 14+ (spec §5). A normal permission, granted at install. -->
+    <uses-permission android:name="android.permission.DETECT_SCREEN_CAPTURE" />
+
+    <application>
+        <!-- The report screen (spec §6). -->
+        <activity
+            android:name=".internal.ui.FeedbackActivity"
+            android:exported="false"
+            android:theme="@style/feedbackkit_TranslucentTheme"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- Asks Google Play services to install the photo picker backport on devices without the
+             system picker (spec §6). Disabled and without permissions: inert everywhere else. -->
+        <service
+            android:name="com.google.android.gms.metadata.ModuleDependencies"
+            android:enabled="false"
+            android:exported="false"
+            tools:ignore="MissingClass">
+            <intent-filter>
+                <action android:name="com.google.android.gms.metadata.MODULE_DEPENDENCIES" />
+            </intent-filter>
+            <meta-data
+                android:name="photopicker_activity:0:required"
+                android:value="" />
+        </service>
+    </application>
+</manifest>

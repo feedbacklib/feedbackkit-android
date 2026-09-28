@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <external-files-path name="reports" path="feedbackkit-reports/" />
+    <!-- Only the one directory the "Attach by content Uri" button writes into. -->
+    <files-path name="host-files" path="host-files/" />
+</paths>

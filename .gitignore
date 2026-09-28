@@ -1,0 +1,28 @@
+# Gradle
+.gradle/
+build/
+.kotlin/
+
+# Local configuration
+local.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build outputs
+*.apk
+*.aab
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Design notes, plans and ADRs: kept locally, not published; the backend contract is published
+docs/*
+!docs/backend-contract.md
+!docs/openapi.yaml
