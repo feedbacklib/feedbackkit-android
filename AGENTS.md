@@ -86,6 +86,7 @@ LOG="$TEMP/feedbackkit-build.log"
 | Всё (тесты, lint, ABI) | `./gradlew build` |
 | Публикация локально | `./gradlew publishToMavenLocal` |
 | Sample APK | `./gradlew :sample:assembleDebug` |
+| Замер `build()` (§10): release-код с R8, profileable; debug на эмуляторе в разы медленнее и бюджет не проверяет | `./gradlew :sample:assembleBenchmark`, затем лог `FeedbackKitSample` или `atrace` по секциям `FeedbackKit.*` |
 | ABI-дамп (обновить / проверить) | `./gradlew updateAbi` / `./gradlew checkAbi` |
 
 `local.properties` (не в git): `sdk.dir=C\:\\Workspace\\android-sdk`.

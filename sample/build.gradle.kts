@@ -17,6 +17,18 @@ android {
         versionName = providers.gradleProperty("feedbackkit.version").get()
     }
 
+    buildTypes {
+        // Release code (R8, not debuggable) signed with the debug key and profileable from the shell:
+        // what the spec §10 build() budget is measured on. A debug build runs interpreted and says little.
+        create("benchmark") {
+            initWith(getByName("release"))
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
