@@ -30,14 +30,15 @@ internal object ExifOrientation {
         if (swapsSides(orientation)) height to width else width to height
 
     /** The orientation a photo asks for; [NORMAL] for screenshots, PNGs and anything unreadable. Disk I/O. */
-    fun read(file: File): Int {
-        if (file.extension.lowercase() !in EXIF_EXTENSIONS) return NORMAL
-        return try {
+    fun read(file: File): Int = if (file.extension.lowercase() !in EXIF_EXTENSIONS) NORMAL else readByContent(file)
+
+    /** Like [read], whatever the file is named: the platform tells the format from the bytes. Disk I/O. */
+    fun readByContent(file: File): Int =
+        try {
             ExifInterface(file.path).getAttributeInt(ExifInterface.TAG_ORIENTATION, NORMAL).takeIf { it in NORMAL..ROTATE_270 } ?: NORMAL
         } catch (e: Exception) {
             NORMAL
         }
-    }
 
     /** The turn [orientation] asks for, about the origin; null when there is nothing to turn. */
     private fun matrix(orientation: Int): Matrix? {

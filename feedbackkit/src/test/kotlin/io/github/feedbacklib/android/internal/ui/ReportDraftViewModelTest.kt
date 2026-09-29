@@ -35,6 +35,7 @@ import io.github.feedbacklib.android.internal.invoke.InvocationSource
 import io.github.feedbacklib.android.internal.recording.PendingClips
 import io.github.feedbacklib.android.internal.report.DraftFile
 import io.github.feedbacklib.android.internal.report.DraftStore
+import io.github.feedbacklib.android.internal.report.ReencodedFormat
 import io.github.feedbacklib.android.internal.report.ExtendedFields
 import io.github.feedbacklib.android.internal.report.ProactiveInfo
 import io.github.feedbacklib.android.internal.report.ProactiveTrigger
@@ -1016,7 +1017,7 @@ class ReportDraftViewModelTest {
         idle()
         assertEquals(listOf(AttachmentKind.SCREENSHOT, AttachmentKind.GALLERY_IMAGE), vm.uiState.attachments.map { it.kind })
         val copy = vm.uiState.attachments.last()
-        assertEquals("image/png", copy.mimeType)
+        assertEquals("the type the fake environment re-encodes to, not the picked one", "image/jpeg", copy.mimeType)
         assertTrue(copy.file.readBytes().contentEquals(byteArrayOf(4, 5)))
         assertNull(vm.uiState.notice)
     }
@@ -1893,7 +1894,7 @@ class ReportDraftViewModelTest {
     private class FakeEnvironment(draftRoot: File, io: CoroutineDispatcher = DirectDispatcher) : ReportEnvironment {
         override val config = MutableStateFlow(Config(enabled = true, logLevel = LogLevel.NONE, userEmail = "me@example.com", userName = null))
         override val logger = SdkLogger(LogLevel.NONE)
-        override val drafts = DraftStore({ draftRoot }, logger, { _, _ -> true }, io = io)
+        override val drafts = DraftStore({ draftRoot }, logger, { source, target -> source.copyTo(target); ReencodedFormat.JPEG } /* re-encoding: a plain copy named as JPEG */, io = io)
         override val content = FakeContent()
         override val images = FakeImages()
         override val canRecord = MutableStateFlow(false)

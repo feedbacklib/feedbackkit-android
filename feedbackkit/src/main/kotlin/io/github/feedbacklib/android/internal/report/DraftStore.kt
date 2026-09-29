@@ -55,8 +55,8 @@ internal data class PendingCapture(val draftId: String, val json: String)
 internal class DraftStore(
     private val root: () -> File,
     private val logger: SdkLogger,
-    /** Takes the location out of each gallery image before it enters a draft (spec §6). */
-    private val stripLocation: LocationStripper,
+    /** Re-encodes each gallery image before it enters a draft, so no metadata comes along (spec §6). */
+    private val sanitizeImage: ImageSanitizer,
     private val clock: () -> Long = System::currentTimeMillis,
     private val io: CoroutineDispatcher = Dispatchers.IO,
 ) {
@@ -146,10 +146,12 @@ internal class DraftStore(
         }
 
     /**
-     * Copies an image into the draft: an accepted image [mimeType] (checked before anything is
-     * read), below [maxAttachments] attachments, at most [maxBytes]. The copy lands under a
-     * temporary name and is renamed into place only when complete and rid of its location
-     * ([stripLocation]); a copy that may still carry one is dropped as [AddImageResult.Failed].
+     * Brings a gallery image into the draft: an accepted image [mimeType] (checked before anything
+     * is read), below [maxAttachments] attachments, at most [maxBytes] as picked. The source is
+     * copied under a temporary name and re-encoded by [sanitizeImage] (spec §6: no metadata reaches
+     * the report) into a second one, which is renamed into place, named by the format actually
+     * written. An image that cannot be decoded is [AddImageResult.Failed]. Both temporary files are
+     * gone when this returns, whatever the outcome.
      */
     fun addImage(
         draftId: String,
@@ -158,29 +160,29 @@ internal class DraftStore(
         maxAttachments: Int,
         maxBytes: Long,
     ): AddImageResult {
-        var partial: File? = null
+        var dir: File? = null
         return try {
-            val extension = MimeTypes.imageExtension(mimeType())
             when {
-                extension == null -> AddImageResult.Unsupported
+                MimeTypes.imageExtension(mimeType()) == null -> AddImageResult.Unsupported
                 attachments(draftId).size >= maxAttachments -> AddImageResult.LimitReached
                 else -> {
-                    val dir = draftDir(draftId) // before open(): an invalid id must not leak the stream
+                    val draft = draftDir(draftId).also { dir = it } // before open(): an invalid id must not leak the stream
                     val input = open()
                     if (input == null) {
                         AddImageResult.Failed
                     } else {
-                        val tmp = File(dir, IMAGE_TMP_NAME).also { partial = it }
-                        val size = input.use { copyLimited(it, tmp, maxBytes) }
-                        if (size == null) {
-                            AddImageResult.TooLarge
-                        } else if (!stripLocation.strip(tmp, extension)) {
-                            AddImageResult.Failed
-                        } else {
-                            val target = File(dir, uniqueName(dir, GALLERY_PREFIX, ".$extension"))
-                            moveInto(tmp, target)
-                            partial = null
-                            AddImageResult.Added(draftFile(target)!!)
+                        val picked = File(draft, IMAGE_TMP_NAME)
+                        val size = input.use { copyLimited(it, picked, maxBytes) }
+                        val encoded = File(draft, ENCODED_TMP_NAME)
+                        val format = if (size == null) null else sanitizeImage.sanitize(picked, encoded)
+                        when {
+                            size == null -> AddImageResult.TooLarge
+                            format == null -> AddImageResult.Failed
+                            else -> {
+                                val target = File(draft, uniqueName(draft, GALLERY_PREFIX, ".${format.extension}"))
+                                moveInto(encoded, target)
+                                AddImageResult.Added(draftFile(target)!!)
+                            }
                         }
                     }
                 }
@@ -189,11 +191,14 @@ internal class DraftStore(
             logger.w("Could not add an image to the report draft", e)
             AddImageResult.Failed
         } finally {
-            partial?.let { tmp ->
-                tmp.delete()
-                // Where the platform ExifInterface saves beside the file (before API 30), a failed save can leave it.
-                File(tmp.path + ".tmp").delete()
-            }
+            dir?.let(::deleteImageTemps)
+        }
+    }
+
+    private fun deleteImageTemps(dir: File) {
+        for (name in IMAGE_TEMP_NAMES) {
+            val tmp = File(dir, name)
+            if (tmp.exists() && !tmp.delete()) logger.w("Could not delete a temporary image file of the report draft")
         }
     }
 
@@ -359,7 +364,8 @@ internal class DraftStore(
      * FeedbackActivity the system is restoring right now, or wait in capture mode, so it stays; so
      * does any draft whose queue is open. A stale draft is renamed out of the way while no queue can
      * open for it, then deleted outside the lock; one left half-deleted by a killed process goes on
-     * the next start.
+     * the next start. A younger draft whose queue is not open loses only the temporary files of a
+     * gallery import the process was killed in.
      */
     fun purgeStale(cutoff: Long = staleCutoff()) {
         try {
@@ -370,7 +376,11 @@ internal class DraftStore(
                     deleteAbandoned(draft)
                     return@forEach
                 }
-                if (!isStale(draft, cutoff)) return@forEach
+                if (!isStale(draft, cutoff)) {
+                    // A process killed during a gallery import leaves its temporary files behind.
+                    unlessLive(draft.name) { deleteImageTemps(draft) }
+                    return@forEach
+                }
                 val purging = File(root, PURGING_PREFIX + draft.name)
                 var claimed = false
                 unlessLive(draft.name) { claimed = draft.renameTo(purging) }
@@ -441,6 +451,8 @@ internal class DraftStore(
         private const val RECORDING_PREFIX = "recording-"
         private const val TMP_SUFFIX = ".tmp"
         private const val IMAGE_TMP_NAME = "image.tmp"
+        private const val ENCODED_TMP_NAME = "image-encoded.tmp"
+        private val IMAGE_TEMP_NAMES = listOf(IMAGE_TMP_NAME, ENCODED_TMP_NAME)
         private const val EDIT_TMP_NAME = "edit.tmp"
 
         /** A stale draft renamed out of the way and being deleted; never a valid draft id. */

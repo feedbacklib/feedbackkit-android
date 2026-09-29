@@ -36,14 +36,18 @@ class DraftStoreTest {
     private val day = 24 * 60 * 60 * 1000L
     private var clock = now
     private val logger = SdkLogger(LogLevel.NONE)
-    /** Gallery copies the stripper saw (name, extension, bytes); [stripResult] decides each. */
-    private val stripped = mutableListOf<Triple<String, String, ByteArray>>()
-    private var stripResult: (File) -> Boolean = { true }
-    private val stripper = LocationStripper { file, extension ->
-        stripped += Triple(file.name, extension, file.readBytes())
-        stripResult(file)
+    /** Picked copies the sanitizer saw (name, bytes); [sanitize] re-encodes each, by default as a copy written as [encodeAs]. */
+    private val sanitized = mutableListOf<Pair<String, ByteArray>>()
+    private var encodeAs: ReencodedFormat = ReencodedFormat.PNG
+    private var sanitize: (File, File) -> ReencodedFormat? = { source, target ->
+        source.copyTo(target)
+        encodeAs
     }
-    private val store by lazy { DraftStore({ File(temp, "drafts") }, logger, stripper, clock = { clock }) }
+    private val sanitizer = ImageSanitizer { source, target ->
+        sanitized += source.name to source.readBytes()
+        sanitize(source, target)
+    }
+    private val store by lazy { DraftStore({ File(temp, "drafts") }, logger, sanitizer, clock = { clock }) }
 
     private fun purging(): List<String> = File(temp, "drafts").list().orEmpty().filter { it.startsWith(".purging-") }
 
@@ -99,49 +103,60 @@ class DraftStoreTest {
     }
 
     @Test
-    fun `a gallery image is copied under a timestamped name with its real type`() {
-        val result = store.addImage("d1", { "image/jpeg" }, { byteArrayOf(1, 2).inputStream() }, 4, 1_000)
+    fun `a gallery image enters the draft re-encoded, named by the format written`() {
+        encodeAs = ReencodedFormat.JPEG
+        val result = store.addImage("d1", { "image/heic" }, { byteArrayOf(1, 2).inputStream() }, 4, 1_000)
         val added = (result as AddImageResult.Added).file
         assertEquals("gallery-$now.jpg", added.fileName)
         assertEquals(AttachmentKind.GALLERY_IMAGE, added.kind)
         assertEquals("image/jpeg", added.mimeType)
         assertArrayEquals(byteArrayOf(1, 2), added.file.readBytes())
+        encodeAs = ReencodedFormat.PNG
+        val png = (store.addImage("d1", { "image/jpeg" }, { byteArrayOf(3).inputStream() }, 4, 1_000) as AddImageResult.Added).file
+        assertEquals("image/png", png.mimeType)
+        assertTrue(png.fileName.endsWith(".png"))
     }
 
     @Test
-    fun `the location is taken out of the complete copy before it enters the draft`() {
-        stripResult = { file ->
-            assertFalse(draftFile("gallery-$now.jpg").exists(), "not in the draft before stripping")
-            file.writeBytes(byteArrayOf(9))
-            true
+    fun `the re-encoded file, not the picked copy, is what the draft keeps`() {
+        sanitize = { source, target ->
+            assertTrue(File(temp, "drafts/d1").list().orEmpty().none { it.startsWith("gallery-") }, "nothing in the draft before re-encoding")
+            assertArrayEquals(byteArrayOf(1, 2), source.readBytes(), "the complete copy")
+            target.writeBytes(byteArrayOf(9))
+            ReencodedFormat.JPEG
         }
         val added = (store.addImage("d1", { "image/jpeg" }, { byteArrayOf(1, 2).inputStream() }, 4, 1_000) as AddImageResult.Added).file
-        assertEquals(1, stripped.size)
-        assertEquals("jpg", stripped.single().second)
-        assertArrayEquals(byteArrayOf(1, 2), stripped.single().third)
-        assertArrayEquals(byteArrayOf(9), added.file.readBytes(), "the stripped file is what the draft keeps")
+        assertEquals(1, sanitized.size)
+        assertArrayEquals(byteArrayOf(9), added.file.readBytes())
+        assertEquals(listOf(added.fileName), File(temp, "drafts/d1").list()!!.toList(), "no temporary file stays after success")
     }
 
     @Test
-    fun `an image that may still carry a location never enters the draft`() {
-        stripResult = { false }
+    fun `an image that cannot be decoded never enters the draft`() {
+        sanitize = { _, target ->
+            target.writeBytes(byteArrayOf(1)) // a half-written encoding
+            null
+        }
         assertEquals(AddImageResult.Failed, store.addImage("d1", { "image/heic" }, { byteArrayOf(1).inputStream() }, 4, 1_000))
-        assertEquals("heic", stripped.single().second)
         assertTrue(File(temp, "drafts/d1").listFiles().orEmpty().isEmpty(), "no copy may stay")
     }
 
     @Test
-    fun `a stripper that throws drops the image instead of crashing`() {
-        stripResult = { throw IOException("disk full") }
+    fun `a sanitizer that throws drops the image instead of crashing`() {
+        sanitize = { _, target ->
+            target.writeBytes(byteArrayOf(1))
+            throw IOException("disk full")
+        }
         assertEquals(AddImageResult.Failed, store.addImage("d1", { "image/jpeg" }, { byteArrayOf(1).inputStream() }, 4, 1_000))
         assertTrue(File(temp, "drafts/d1").listFiles().orEmpty().isEmpty(), "no copy may stay")
     }
 
     @Test
-    fun `refused and oversized images never reach the stripper`() {
+    fun `refused and oversized images never reach the sanitizer`() {
         store.addImage("d1", { "text/plain" }, { byteArrayOf(1).inputStream() }, 4, 1_000)
         store.addImage("d1", { "image/png" }, { ByteArray(1_001).inputStream() }, 4, 1_000)
-        assertTrue(stripped.isEmpty())
+        assertTrue(sanitized.isEmpty())
+        assertTrue(File(temp, "drafts/d1").listFiles().orEmpty().isEmpty(), "no partial copy may stay")
     }
 
     @Test
@@ -150,8 +165,7 @@ class DraftStoreTest {
         assertEquals("png", MimeTypes.imageExtension("image/x-png"))
         assertEquals("jpg", MimeTypes.imageExtension("IMAGE/JPEG; q=1"))
         assertNull(MimeTypes.imageExtension("image/bmp"))
-        val added = store.addImage("d1", { "image/jpg" }, { byteArrayOf(1).inputStream() }, 4, 1_000)
-        assertEquals("gallery-$now.jpg", (added as AddImageResult.Added).file.fileName)
+        assertTrue(store.addImage("d1", { "image/jpg" }, { byteArrayOf(1).inputStream() }, 4, 1_000) is AddImageResult.Added)
     }
 
     @Test
@@ -298,6 +312,7 @@ class DraftStoreTest {
 
     @Test
     fun `an edited jpeg becomes a png that keeps its kind and place`() {
+        encodeAs = ReencodedFormat.JPEG
         val jpeg = (store.addImage("d1", { "image/jpeg" }, { byteArrayOf(1).inputStream() }, 4, 1_000) as AddImageResult.Added).file
         val saved = store.replaceEdited("d1", jpeg.fileName) { out -> out.write(byteArrayOf(9)); true }
         assertEquals("gallery-$now.png", saved!!.fileName)
@@ -308,6 +323,7 @@ class DraftStoreTest {
 
     @Test
     fun `the editor steps are forgotten before the edited image replaces the original`() {
+        encodeAs = ReencodedFormat.JPEG
         val jpeg = (store.addImage("d1", { "image/jpeg" }, { byteArrayOf(1).inputStream() }, 4, 1_000) as AddImageResult.Added).file
         store.writeEdits("d1", jpeg.fileName, "{\"steps\":[1]}")
         // A non-empty directory in the png's place makes the replace fail, standing in for a kill
@@ -444,6 +460,23 @@ class DraftStoreTest {
         assertFalse(File(temp, "drafts/old").exists())
         assertTrue(File(temp, "drafts/fresh/screenshot.png").exists())
         assertTrue(purging().isEmpty())
+    }
+
+    @Test
+    fun `the startup sweep deletes the temporary files of an import the process was killed in`() {
+        addPng()
+        for (name in listOf("image.tmp", "image-encoded.tmp")) draftFile(name).writeBytes(byteArrayOf(1))
+        DraftStore({ File(temp, "drafts") }, logger, sanitizer, clock = { clock }).purgeStale() // a new process: no queue open
+        assertEquals(listOf("gallery-$now.png"), File(temp, "drafts/d1").list()!!.toList())
+    }
+
+    @Test
+    fun `the startup sweep leaves the temporary files of a draft whose queue is open`() {
+        store.queue("d1")
+        File(temp, "drafts/d1").mkdirs()
+        draftFile("image.tmp").writeBytes(byteArrayOf(1))
+        store.purgeStale()
+        assertTrue(draftFile("image.tmp").exists(), "an import may be running on the queue")
     }
 
     @Test
