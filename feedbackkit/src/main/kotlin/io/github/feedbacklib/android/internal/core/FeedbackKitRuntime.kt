@@ -31,6 +31,7 @@ import io.github.feedbacklib.android.internal.report.AppFileAttachments
 import io.github.feedbacklib.android.internal.report.AppInfoCollector
 import io.github.feedbacklib.android.internal.report.DeviceInfoCollector
 import io.github.feedbacklib.android.internal.report.DraftStore
+import io.github.feedbacklib.android.internal.report.ExifLocationStripper
 import io.github.feedbacklib.android.internal.report.ReportDraft
 import io.github.feedbacklib.android.internal.report.ReportSubmitter
 import io.github.feedbacklib.android.spi.ScreenRecorderProvider
@@ -138,7 +139,7 @@ internal class FeedbackKitRuntime private constructor(
         AppFileAttachments(app.contentResolver, { File(root, APP_FILES_DIR) }, logger, scope)
     }
 
-    val drafts: DraftStore by lazy { DraftStore({ File(root, DRAFTS_DIR) }, logger) }
+    val drafts: DraftStore by lazy { DraftStore({ File(root, DRAFTS_DIR) }, logger, ExifLocationStripper(logger)) }
 
     val submitter: ReportSubmitter by lazy {
         val deviceInfo = DeviceInfoCollector(app)

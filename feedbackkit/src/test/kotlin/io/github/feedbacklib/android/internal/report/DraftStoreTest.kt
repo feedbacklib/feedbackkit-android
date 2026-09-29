@@ -36,7 +36,14 @@ class DraftStoreTest {
     private val day = 24 * 60 * 60 * 1000L
     private var clock = now
     private val logger = SdkLogger(LogLevel.NONE)
-    private val store by lazy { DraftStore({ File(temp, "drafts") }, logger, clock = { clock }) }
+    /** Gallery copies the stripper saw (name, extension, bytes); [stripResult] decides each. */
+    private val stripped = mutableListOf<Triple<String, String, ByteArray>>()
+    private var stripResult: (File) -> Boolean = { true }
+    private val stripper = LocationStripper { file, extension ->
+        stripped += Triple(file.name, extension, file.readBytes())
+        stripResult(file)
+    }
+    private val store by lazy { DraftStore({ File(temp, "drafts") }, logger, stripper, clock = { clock }) }
 
     private fun purging(): List<String> = File(temp, "drafts").list().orEmpty().filter { it.startsWith(".purging-") }
 
@@ -99,6 +106,42 @@ class DraftStoreTest {
         assertEquals(AttachmentKind.GALLERY_IMAGE, added.kind)
         assertEquals("image/jpeg", added.mimeType)
         assertArrayEquals(byteArrayOf(1, 2), added.file.readBytes())
+    }
+
+    @Test
+    fun `the location is taken out of the complete copy before it enters the draft`() {
+        stripResult = { file ->
+            assertFalse(draftFile("gallery-$now.jpg").exists(), "not in the draft before stripping")
+            file.writeBytes(byteArrayOf(9))
+            true
+        }
+        val added = (store.addImage("d1", { "image/jpeg" }, { byteArrayOf(1, 2).inputStream() }, 4, 1_000) as AddImageResult.Added).file
+        assertEquals(1, stripped.size)
+        assertEquals("jpg", stripped.single().second)
+        assertArrayEquals(byteArrayOf(1, 2), stripped.single().third)
+        assertArrayEquals(byteArrayOf(9), added.file.readBytes(), "the stripped file is what the draft keeps")
+    }
+
+    @Test
+    fun `an image that may still carry a location never enters the draft`() {
+        stripResult = { false }
+        assertEquals(AddImageResult.Failed, store.addImage("d1", { "image/heic" }, { byteArrayOf(1).inputStream() }, 4, 1_000))
+        assertEquals("heic", stripped.single().second)
+        assertTrue(File(temp, "drafts/d1").listFiles().orEmpty().isEmpty(), "no copy may stay")
+    }
+
+    @Test
+    fun `a stripper that throws drops the image instead of crashing`() {
+        stripResult = { throw IOException("disk full") }
+        assertEquals(AddImageResult.Failed, store.addImage("d1", { "image/jpeg" }, { byteArrayOf(1).inputStream() }, 4, 1_000))
+        assertTrue(File(temp, "drafts/d1").listFiles().orEmpty().isEmpty(), "no copy may stay")
+    }
+
+    @Test
+    fun `refused and oversized images never reach the stripper`() {
+        store.addImage("d1", { "text/plain" }, { byteArrayOf(1).inputStream() }, 4, 1_000)
+        store.addImage("d1", { "image/png" }, { ByteArray(1_001).inputStream() }, 4, 1_000)
+        assertTrue(stripped.isEmpty())
     }
 
     @Test

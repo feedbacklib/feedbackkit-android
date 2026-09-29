@@ -1893,7 +1893,7 @@ class ReportDraftViewModelTest {
     private class FakeEnvironment(draftRoot: File, io: CoroutineDispatcher = DirectDispatcher) : ReportEnvironment {
         override val config = MutableStateFlow(Config(enabled = true, logLevel = LogLevel.NONE, userEmail = "me@example.com", userName = null))
         override val logger = SdkLogger(LogLevel.NONE)
-        override val drafts = DraftStore({ draftRoot }, logger, io = io)
+        override val drafts = DraftStore({ draftRoot }, logger, { _, _ -> true }, io = io)
         override val content = FakeContent()
         override val images = FakeImages()
         override val canRecord = MutableStateFlow(false)

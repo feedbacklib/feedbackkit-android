@@ -55,6 +55,8 @@ internal data class PendingCapture(val draftId: String, val json: String)
 internal class DraftStore(
     private val root: () -> File,
     private val logger: SdkLogger,
+    /** Takes the location out of each gallery image before it enters a draft (spec §6). */
+    private val stripLocation: LocationStripper,
     private val clock: () -> Long = System::currentTimeMillis,
     private val io: CoroutineDispatcher = Dispatchers.IO,
 ) {
@@ -146,7 +148,8 @@ internal class DraftStore(
     /**
      * Copies an image into the draft: an accepted image [mimeType] (checked before anything is
      * read), below [maxAttachments] attachments, at most [maxBytes]. The copy lands under a
-     * temporary name and is renamed into place only when complete.
+     * temporary name and is renamed into place only when complete and rid of its location
+     * ([stripLocation]); a copy that may still carry one is dropped as [AddImageResult.Failed].
      */
     fun addImage(
         draftId: String,
@@ -171,6 +174,8 @@ internal class DraftStore(
                         val size = input.use { copyLimited(it, tmp, maxBytes) }
                         if (size == null) {
                             AddImageResult.TooLarge
+                        } else if (!stripLocation.strip(tmp, extension)) {
+                            AddImageResult.Failed
                         } else {
                             val target = File(dir, uniqueName(dir, GALLERY_PREFIX, ".$extension"))
                             moveInto(tmp, target)
@@ -184,7 +189,11 @@ internal class DraftStore(
             logger.w("Could not add an image to the report draft", e)
             AddImageResult.Failed
         } finally {
-            partial?.delete()
+            partial?.let { tmp ->
+                tmp.delete()
+                // Where the platform ExifInterface saves beside the file (before API 30), a failed save can leave it.
+                File(tmp.path + ".tmp").delete()
+            }
         }
     }
 
