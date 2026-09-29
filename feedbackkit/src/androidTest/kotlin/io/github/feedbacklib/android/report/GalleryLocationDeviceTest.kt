@@ -2,7 +2,9 @@ package io.github.feedbacklib.android.report
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.media.ExifInterface
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -11,6 +13,7 @@ import io.github.feedbacklib.android.internal.core.SdkLogger
 import io.github.feedbacklib.android.internal.report.AddImageResult
 import io.github.feedbacklib.android.internal.report.DraftStore
 import io.github.feedbacklib.android.internal.report.PlatformImageSanitizer
+import io.github.feedbacklib.android.internal.report.Reencoding
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -20,9 +23,9 @@ import org.junit.runner.RunWith
 import java.io.File
 
 /**
- * A gallery photo with a location goes through the real import path and reaches the draft
- * re-encoded, with no metadata (spec §6): on this device's decoder (ImageDecoder from API 28) and on
- * the BitmapFactory path older devices take.
+ * A gallery photo goes through the real import path and reaches the draft re-encoded (spec §6):
+ * upright by its EXIF orientation, with no metadata. Each case runs on this device's decoder
+ * (ImageDecoder from API 28) and on the BitmapFactory path older devices take.
  */
 @RunWith(AndroidJUnit4::class)
 class GalleryLocationDeviceTest {
@@ -33,18 +36,23 @@ class GalleryLocationDeviceTest {
         mkdirs()
     }
     private val logger = SdkLogger(LogLevel.NONE)
-    private val sanitizers = listOf(PlatformImageSanitizer(logger), PlatformImageSanitizer(logger, sdkInt = 27))
+    private val sanitizers = mapOf(
+        "this device's decoder" to PlatformImageSanitizer(logger),
+        "the BitmapFactory path" to PlatformImageSanitizer(logger, sdkInt = 27),
+    )
 
     /**
-     * A 64×32 JPEG stored sideways (orientation 6) that carries a location three ways: Exif GPS
-     * tags, an XMP APP1 segment with exif:GPSLatitude, and a second JPEG with its own Exif after
-     * the end of the image.
+     * A [width]×[height] JPEG as stored: its top-left quarter red, the rest blue, with EXIF
+     * [orientation]. It also carries a location three ways: Exif GPS tags, an XMP APP1 segment with
+     * exif:GPSLatitude, and a second JPEG with its own Exif after the end of the image.
      */
-    private fun photoWithLocation(): File = File(dir, "photo-${System.nanoTime()}.jpg").apply {
-        val bitmap = Bitmap.createBitmap(64, 32, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.RED) }
-        outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+    private fun photo(orientation: Int, width: Int = 64, height: Int = 32): File = File(dir, "photo-${System.nanoTime()}.jpg").apply {
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.BLUE) }
+        Canvas(bitmap).drawRect(0f, 0f, width / 2f, height / 2f, Paint().apply { color = Color.RED })
+        outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+        bitmap.recycle()
         ExifInterface(path).apply {
-            setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_ROTATE_90.toString())
+            setAttribute(ExifInterface.TAG_ORIENTATION, orientation.toString())
             setAttribute(ExifInterface.TAG_GPS_LATITUDE, "55/1,45/1,0/1")
             setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, "N")
             setAttribute(ExifInterface.TAG_GPS_LONGITUDE, "37/1,37/1,12/1")
@@ -72,20 +80,73 @@ class GalleryLocationDeviceTest {
     private fun ByteArray.indexOf(needle: ByteArray): Int =
         (0..size - needle.size).firstOrNull { start -> needle.indices.all { this[start + it] == needle[it] } } ?: -1
 
+    private fun assertNoMetadata(path: String, file: File) {
+        assertEquals("$path: jpg", "jpg", file.extension)
+        val bytes = file.readBytes()
+        assertEquals("$path: no Exif", -1, bytes.indexOf("Exif".toByteArray() + byteArrayOf(0, 0)))
+        assertEquals("$path: no XMP", -1, bytes.indexOf("http://ns.adobe.com/xap".toByteArray()))
+        assertEquals("$path: ends at its first end-of-image marker", bytes.size - 2, bytes.indexOf(byteArrayOf(0xFF.toByte(), 0xD9.toByte())))
+        val exif = ExifInterface(file.path)
+        assertFalse("$path: no location", exif.getLatLong(FloatArray(2)))
+        assertEquals("$path: no orientation tag", null, exif.getAttribute(ExifInterface.TAG_ORIENTATION))
+        assertTrue("$path: no temporary file stays", file.parentFile!!.list()!!.none { it.endsWith(".tmp") })
+    }
+
+    private fun isRed(pixel: Int) = Color.red(pixel) > 200 && Color.blue(pixel) < 60
+
+    private fun isBlue(pixel: Int) = Color.blue(pixel) > 200 && Color.red(pixel) < 60
+
+    /** Imports a 64×32 photo with [orientation] and checks size and which corner is red (JPEG colours: approximately). */
+    private fun assertTurned(orientation: Int, width: Int, height: Int, red: Corner) {
+        for ((path, sanitizer) in sanitizers) {
+            val imported = import(sanitizer, photo(orientation))
+            assertNoMetadata(path, imported)
+            val bitmap = BitmapFactory.decodeFile(imported.path)
+            assertEquals("$path: size", width to height, bitmap.width to bitmap.height)
+            for (corner in Corner.entries) {
+                val pixel = bitmap.getPixel(corner.x(width), corner.y(height))
+                if (corner == red) {
+                    assertTrue("$path: $corner is red, was ${Integer.toHexString(pixel)}", isRed(pixel))
+                } else {
+                    assertTrue("$path: $corner is blue, was ${Integer.toHexString(pixel)}", isBlue(pixel))
+                }
+            }
+            bitmap.recycle()
+        }
+    }
+
+    /** A point well inside each quarter, away from the JPEG blur along the edges between them. */
+    private enum class Corner(val fx: Float, val fy: Float) {
+        TOP_LEFT(0.25f, 0.25f),
+        TOP_RIGHT(0.75f, 0.25f),
+        BOTTOM_LEFT(0.25f, 0.75f),
+        BOTTOM_RIGHT(0.75f, 0.75f),
+        ;
+
+        fun x(width: Int) = (width * fx).toInt()
+
+        fun y(height: Int) = (height * fy).toInt()
+    }
+
     @Test
-    fun aPhotoEntersTheDraftWithNoMetadataAndItsOrientationBakedIn() {
-        for (sanitizer in sanitizers) {
-            val imported = import(sanitizer, photoWithLocation())
-            assertEquals("jpg", imported.extension)
-            val bytes = imported.readBytes()
-            assertEquals(-1, bytes.indexOf("Exif".toByteArray() + byteArrayOf(0, 0)))
-            assertEquals(-1, bytes.indexOf("http://ns.adobe.com/xap".toByteArray()))
-            assertEquals("the file ends at its first end-of-image marker", bytes.size - 2, bytes.indexOf(byteArrayOf(0xFF.toByte(), 0xD9.toByte())))
-            assertFalse(ExifInterface(imported.path).getLatLong(FloatArray(2)))
+    fun orientation6TurnsClockwise() = assertTurned(ExifInterface.ORIENTATION_ROTATE_90, 32, 64, Corner.TOP_RIGHT)
+
+    @Test
+    fun orientation8TurnsCounterclockwise() = assertTurned(ExifInterface.ORIENTATION_ROTATE_270, 32, 64, Corner.BOTTOM_LEFT)
+
+    @Test
+    fun orientation2FlipsHorizontally() = assertTurned(ExifInterface.ORIENTATION_FLIP_HORIZONTAL, 64, 32, Corner.TOP_RIGHT)
+
+    @Test
+    fun aLargeTurnedPhotoIsBroughtDownWithItsAspectKept() {
+        for ((path, sanitizer) in sanitizers) {
+            val imported = import(sanitizer, photo(ExifInterface.ORIENTATION_ROTATE_90, width = 6000, height = 2000))
+            assertNoMetadata(path, imported)
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }.also { BitmapFactory.decodeFile(imported.path, it) }
-            assertEquals("turned upright", 32 to 64, bounds.outWidth to bounds.outHeight)
-            assertEquals(ExifInterface.ORIENTATION_UNDEFINED, ExifInterface(imported.path).getAttributeInt(ExifInterface.TAG_ORIENTATION, 0))
-            assertTrue("no temporary file stays", imported.parentFile!!.list()!!.none { it.endsWith(".tmp") })
+            val (width, height) = bounds.outWidth to bounds.outHeight
+            assertTrue("$path: ${width}x$height upright", height > width)
+            assertTrue("$path: long side $height", height <= Reencoding.MAX_SIDE)
+            assertEquals("$path: 1:3 kept (${width}x$height)", 3.0, height.toDouble() / width, 0.01)
         }
     }
 }

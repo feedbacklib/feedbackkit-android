@@ -7,8 +7,19 @@ import java.io.File
  * so no EXIF, XMP, IPTC or trailing data can reach the report. Blocking disk I/O.
  */
 internal fun interface ImageSanitizer {
-    /** Writes [source] anew into [target]; the format written, or null when [source] is not an image it can decode. */
-    fun sanitize(source: File, target: File): ReencodedFormat?
+    /** Writes [source] anew into [target]; what [target] must be done with is in the result. */
+    fun sanitize(source: File, target: File): SanitizeResult
+}
+
+internal sealed interface SanitizeResult {
+    /** [target][ImageSanitizer.sanitize] holds the image as [format]. */
+    data class Written(val format: ReencodedFormat) : SanitizeResult
+
+    /** Even the smaller fallbacks came out over the size limit. */
+    data object TooLarge : SanitizeResult
+
+    /** Not an image the platform decodes, or decoding or encoding failed. */
+    data object Failed : SanitizeResult
 }
 
 /** What a re-encoded gallery image is written as. */
@@ -36,11 +47,9 @@ internal object Reencoding {
         return sample
     }
 
-    /** [width] × [height] scaled down, aspect kept, so the longer side is at most [maxSide]; never below 1 px. */
-    fun targetSize(width: Int, height: Int, maxSide: Int = MAX_SIDE): Pair<Int, Int> {
-        val longer = maxOf(width, height)
-        if (longer <= maxSide) return width to height
-        val scale = maxSide.toDouble() / longer
-        return maxOf(1, Math.round(width * scale).toInt()) to maxOf(1, Math.round(height * scale).toInt())
+    /** Whether every pixel of an ARGB [row] is fully opaque. */
+    fun opaque(row: IntArray, length: Int = row.size): Boolean {
+        for (i in 0 until length) if (row[i] ushr 24 != 0xFF) return false
+        return true
     }
 }

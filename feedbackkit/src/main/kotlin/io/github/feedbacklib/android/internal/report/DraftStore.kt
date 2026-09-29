@@ -150,7 +150,8 @@ internal class DraftStore(
      * is read), below [maxAttachments] attachments, at most [maxBytes] as picked. The source is
      * copied under a temporary name and re-encoded by [sanitizeImage] (spec §6: no metadata reaches
      * the report) into a second one, which is renamed into place, named by the format actually
-     * written. An image that cannot be decoded is [AddImageResult.Failed]. Both temporary files are
+     * written. An image that cannot be decoded is [AddImageResult.Failed], one whose encoding stays
+     * over the limit [AddImageResult.TooLarge]. Both temporary files are
      * gone when this returns, whatever the outcome.
      */
     fun addImage(
@@ -174,12 +175,11 @@ internal class DraftStore(
                         val picked = File(draft, IMAGE_TMP_NAME)
                         val size = input.use { copyLimited(it, picked, maxBytes) }
                         val encoded = File(draft, ENCODED_TMP_NAME)
-                        val format = if (size == null) null else sanitizeImage.sanitize(picked, encoded)
-                        when {
-                            size == null -> AddImageResult.TooLarge
-                            format == null -> AddImageResult.Failed
-                            else -> {
-                                val target = File(draft, uniqueName(draft, GALLERY_PREFIX, ".${format.extension}"))
+                        when (val sanitized = if (size == null) SanitizeResult.TooLarge else sanitizeImage.sanitize(picked, encoded)) {
+                            SanitizeResult.TooLarge -> AddImageResult.TooLarge
+                            SanitizeResult.Failed -> AddImageResult.Failed
+                            is SanitizeResult.Written -> {
+                                val target = File(draft, uniqueName(draft, GALLERY_PREFIX, ".${sanitized.format.extension}"))
                                 moveInto(encoded, target)
                                 AddImageResult.Added(draftFile(target)!!)
                             }
@@ -392,7 +392,12 @@ internal class DraftStore(
     }
 
     /** Nothing in [draft] was touched since [cutoff]: the one staleness test of [purgeStale] and [pendingCapture]. */
-    private fun isStale(draft: File, cutoff: Long): Boolean = (draft.walk().maxOfOrNull { it.lastModified() } ?: 0L) < cutoff
+    private fun isStale(draft: File, cutoff: Long): Boolean {
+        // By what is in the draft, not the directory itself: deleting a leftover temporary file
+        // there bumps its time. Only an empty draft goes by the directory's own time.
+        val touched = draft.walk().filter { it != draft }.maxOfOrNull { it.lastModified() } ?: draft.lastModified()
+        return touched < cutoff
+    }
 
     private fun deleteAbandoned(dir: File) {
         if (!dir.deleteRecursively()) logger.w("Could not delete an abandoned report draft")

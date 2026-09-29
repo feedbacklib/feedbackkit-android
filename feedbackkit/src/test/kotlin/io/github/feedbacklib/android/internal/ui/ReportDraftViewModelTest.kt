@@ -36,6 +36,7 @@ import io.github.feedbacklib.android.internal.recording.PendingClips
 import io.github.feedbacklib.android.internal.report.DraftFile
 import io.github.feedbacklib.android.internal.report.DraftStore
 import io.github.feedbacklib.android.internal.report.ReencodedFormat
+import io.github.feedbacklib.android.internal.report.SanitizeResult
 import io.github.feedbacklib.android.internal.report.ExtendedFields
 import io.github.feedbacklib.android.internal.report.ProactiveInfo
 import io.github.feedbacklib.android.internal.report.ProactiveTrigger
@@ -1894,7 +1895,7 @@ class ReportDraftViewModelTest {
     private class FakeEnvironment(draftRoot: File, io: CoroutineDispatcher = DirectDispatcher) : ReportEnvironment {
         override val config = MutableStateFlow(Config(enabled = true, logLevel = LogLevel.NONE, userEmail = "me@example.com", userName = null))
         override val logger = SdkLogger(LogLevel.NONE)
-        override val drafts = DraftStore({ draftRoot }, logger, { source, target -> source.copyTo(target); ReencodedFormat.JPEG } /* re-encoding: a plain copy named as JPEG */, io = io)
+        override val drafts = DraftStore({ draftRoot }, logger, { source, target -> source.copyTo(target); SanitizeResult.Written(ReencodedFormat.JPEG) } /* re-encoding: a plain copy named as JPEG */, io = io)
         override val content = FakeContent()
         override val images = FakeImages()
         override val canRecord = MutableStateFlow(false)

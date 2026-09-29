@@ -36,7 +36,7 @@ class PlatformImageSanitizerTest {
 
     private fun sanitize(sanitizer: PlatformImageSanitizer, source: File): Pair<ReencodedFormat?, File> {
         val target = File(temp.root, "out-${System.nanoTime()}")
-        return sanitizer.sanitize(source, target) to target
+        return (sanitizer.sanitize(source, target) as? SanitizeResult.Written)?.format to target
     }
 
     private fun bitmapFile(name: String, width: Int, height: Int, format: Bitmap.CompressFormat, color: Int = Color.RED): File =
@@ -141,6 +141,47 @@ class PlatformImageSanitizerTest {
             assertNull(sanitize(sanitizer, temp.newFile("garbage-${System.nanoTime()}").apply { writeBytes(ByteArray(64) { it.toByte() }) }).first)
             assertNull(sanitize(sanitizer, temp.newFile("empty-${System.nanoTime()}")).first)
             assertNull(sanitize(sanitizer, File(temp.root, "missing")).first)
+        }
+    }
+
+    /** A [width]×[height] PNG of random pixels, which compress badly; transparent in places when [alpha]. */
+    private fun noisePng(name: String, width: Int, height: Int, alpha: Boolean): File = temp.newFile(name).apply {
+        val random = java.util.Random(42)
+        val pixels = IntArray(width * height) { (if (alpha) random.nextInt(256) else 0xFF) shl 24 or (random.nextInt() and 0xFFFFFF) }
+        val bitmap = Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
+        assertTrue("an RGBA PNG either way", bitmap.hasAlpha())
+        outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
+    @Test
+    fun `an opaque png over the limit is written as jpeg instead`() {
+        val source = noisePng("opaque.png", 256, 256, alpha = false)
+        val limit = source.length() - 1 // the re-encoded PNG holds the same pixels: just as large
+        val target = File(temp.root, "out.jpg")
+        val result = PlatformImageSanitizer(logger, sdkInt = 27, maxBytes = limit).sanitize(source, target)
+        assertEquals(SanitizeResult.Written(ReencodedFormat.JPEG), result)
+        assertTrue(target.length() <= limit)
+        assertEquals(256 to 256, size(target))
+    }
+
+    @Test
+    fun `a transparent png over the limit is written at half its size`() {
+        val source = noisePng("clear.png", 256, 256, alpha = true)
+        val limit = source.length() - 1
+        val target = File(temp.root, "out.png")
+        val result = PlatformImageSanitizer(logger, sdkInt = 27, maxBytes = limit).sanitize(source, target)
+        assertEquals(SanitizeResult.Written(ReencodedFormat.PNG), result)
+        assertTrue(target.length() <= limit)
+        assertEquals(128 to 128, size(target))
+    }
+
+    @Test
+    fun `an image over the limit even at half its size is too large, and nothing past the limit is written`() {
+        for (alpha in listOf(false, true)) {
+            val source = noisePng("big-$alpha.png", 256, 256, alpha)
+            val target = File(temp.root, "out-$alpha")
+            assertEquals(SanitizeResult.TooLarge, PlatformImageSanitizer(logger, sdkInt = 27, maxBytes = 1_000).sanitize(source, target))
+            assertTrue(target.length() <= 1_000)
         }
     }
 }

@@ -39,9 +39,9 @@ class DraftStoreTest {
     /** Picked copies the sanitizer saw (name, bytes); [sanitize] re-encodes each, by default as a copy written as [encodeAs]. */
     private val sanitized = mutableListOf<Pair<String, ByteArray>>()
     private var encodeAs: ReencodedFormat = ReencodedFormat.PNG
-    private var sanitize: (File, File) -> ReencodedFormat? = { source, target ->
+    private var sanitize: (File, File) -> SanitizeResult = { source, target ->
         source.copyTo(target)
-        encodeAs
+        SanitizeResult.Written(encodeAs)
     }
     private val sanitizer = ImageSanitizer { source, target ->
         sanitized += source.name to source.readBytes()
@@ -123,7 +123,7 @@ class DraftStoreTest {
             assertTrue(File(temp, "drafts/d1").list().orEmpty().none { it.startsWith("gallery-") }, "nothing in the draft before re-encoding")
             assertArrayEquals(byteArrayOf(1, 2), source.readBytes(), "the complete copy")
             target.writeBytes(byteArrayOf(9))
-            ReencodedFormat.JPEG
+            SanitizeResult.Written(ReencodedFormat.JPEG)
         }
         val added = (store.addImage("d1", { "image/jpeg" }, { byteArrayOf(1, 2).inputStream() }, 4, 1_000) as AddImageResult.Added).file
         assertEquals(1, sanitized.size)
@@ -135,9 +135,19 @@ class DraftStoreTest {
     fun `an image that cannot be decoded never enters the draft`() {
         sanitize = { _, target ->
             target.writeBytes(byteArrayOf(1)) // a half-written encoding
-            null
+            SanitizeResult.Failed
         }
         assertEquals(AddImageResult.Failed, store.addImage("d1", { "image/heic" }, { byteArrayOf(1).inputStream() }, 4, 1_000))
+        assertTrue(File(temp, "drafts/d1").listFiles().orEmpty().isEmpty(), "no copy may stay")
+    }
+
+    @Test
+    fun `an image whose encoding stays over the limit is too large`() {
+        sanitize = { _, target ->
+            target.writeBytes(byteArrayOf(1)) // cut short at the limit
+            SanitizeResult.TooLarge
+        }
+        assertEquals(AddImageResult.TooLarge, store.addImage("d1", { "image/png" }, { byteArrayOf(1).inputStream() }, 4, 1_000))
         assertTrue(File(temp, "drafts/d1").listFiles().orEmpty().isEmpty(), "no copy may stay")
     }
 
@@ -468,6 +478,17 @@ class DraftStoreTest {
         for (name in listOf("image.tmp", "image-encoded.tmp")) draftFile(name).writeBytes(byteArrayOf(1))
         DraftStore({ File(temp, "drafts") }, logger, sanitizer, clock = { clock }).purgeStale() // a new process: no queue open
         assertEquals(listOf("gallery-$now.png"), File(temp, "drafts/d1").list()!!.toList())
+    }
+
+    @Test
+    fun `a draft is judged by its files, not by the time of its directory`() {
+        addPng()
+        draftFile("gallery-$now.png").setLastModified(now - day - 1)
+        File(temp, "drafts/d1").setLastModified(now) // as deleting a leftover temporary file there does
+        File(temp, "drafts/empty").apply { mkdirs() }.setLastModified(now)
+        DraftStore({ File(temp, "drafts") }, logger, sanitizer, clock = { clock }).purgeStale()
+        assertFalse(File(temp, "drafts/d1").exists(), "abandoned for a day, whatever its directory says")
+        assertTrue(File(temp, "drafts/empty").exists(), "an empty draft goes by its directory")
     }
 
     @Test
