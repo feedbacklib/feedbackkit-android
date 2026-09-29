@@ -88,7 +88,9 @@ class GalleryLocationDeviceTest {
         assertEquals("$path: ends at its first end-of-image marker", bytes.size - 2, bytes.indexOf(byteArrayOf(0xFF.toByte(), 0xD9.toByte())))
         val exif = ExifInterface(file.path)
         assertFalse("$path: no location", exif.getLatLong(FloatArray(2)))
-        assertEquals("$path: no orientation tag", null, exif.getAttribute(ExifInterface.TAG_ORIENTATION))
+        // With no EXIF at all, newer platforms answer "0" (ORIENTATION_UNDEFINED) instead of null.
+        val orientation = exif.getAttribute(ExifInterface.TAG_ORIENTATION)
+        assertTrue("$path: no orientation tag, was $orientation", orientation == null || orientation == "0")
         assertTrue("$path: no temporary file stays", file.parentFile!!.list()!!.none { it.endsWith(".tmp") })
     }
 
